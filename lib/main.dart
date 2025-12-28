@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -5,6 +6,8 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:vocavia/offline_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,8 +15,42 @@ void main() async {
   runApp(const HekalApp());
 }
 
-class HekalApp extends StatelessWidget {
+class HekalApp extends StatefulWidget {
   const HekalApp({super.key});
+
+  @override
+  State<HekalApp> createState() => _HekalAppState();
+}
+
+class _HekalAppState extends State<HekalApp> {
+  bool isConnected = false;
+  StreamSubscription? subscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    subscription = InternetConnection().onStatusChange.listen((status) {
+      switch (status) {
+        case InternetStatus.connected:
+          setState(() {
+            isConnected = true;
+          });
+          break;
+        case InternetStatus.disconnected:
+          setState(() {
+            isConnected = false;
+          });
+          break;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    subscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +62,7 @@ class HekalApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      home: const WebViewScreen(),
+      home: isConnected ? const WebViewScreen() : const OfflineScreen(),
     );
   }
 }
@@ -43,7 +80,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   bool _hasLoadedSuccessfully = false;
-  final String _initialUrl = 'https://mr-heikal.anmka.com/student-login/';
+  final String _initialUrl = 'https://mr-heikal.anmka.com/';
 
   @override
   void initState() {
